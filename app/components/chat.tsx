@@ -638,6 +638,31 @@ export function EditMessageModal(props: { onClose: () => void }) {
               }
             ></input>
           </ListItem>
+          <ListItem
+            title={Locale.Settings.HistoryCount.Title}
+            subTitle={Locale.Settings.HistoryCount.SubTitle}
+          >
+            <InputRange
+              title={(
+                session.overrideModelConfig?.historyMessageCount ??
+                session.mask.modelConfig.historyMessageCount
+              ).toString()}
+              value={
+                session.overrideModelConfig?.historyMessageCount ??
+                session.mask.modelConfig.historyMessageCount
+              }
+              min="0"
+              max="64"
+              step="1"
+              onChange={(e) =>
+                chatStore.updateCurrentSession(
+                  (session) =>
+                    ((session.overrideModelConfig ??= {}).historyMessageCount =
+                      e.currentTarget.valueAsNumber),
+                )
+              }
+            ></InputRange>
+          </ListItem>
         </List>
         <ContextPrompts
           context={messages}
