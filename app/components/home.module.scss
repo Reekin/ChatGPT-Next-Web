@@ -74,6 +74,23 @@
   }
 }
 
+.chat-list-container {
+  display: flex;
+  width: 100%;
+  
+  .left {
+    flex: 1;
+    display: flex;
+    padding: 10px;
+  }
+  
+  .right {
+    flex: 1;
+    display: flex;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2); /* 10% 不透明度的黑色 */
+  }
+}
 .sidebar-drag {
   $width: 14px;
 

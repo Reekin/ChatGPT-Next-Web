@@ -8,7 +8,7 @@ import {
   OnDragEndResponder,
 } from "@hello-pangea/dnd";
 
-import { useChatStore } from "../store";
+import { ChatSession, useChatStore } from "../store";
 
 import Locale from "../locales";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -102,14 +102,21 @@ export function ChatItem(props: {
 }
 
 export function ChatList(props: { narrow?: boolean }) {
-  const [sessions, selectedIndex, selectSession, moveSession] = useChatStore(
-    (state) => [
-      state.sessions,
-      state.currentSessionIndex,
-      state.selectSession,
-      state.moveSession,
-    ],
-  );
+  const [
+    sessions,
+    selectedIndex,
+    selectSession,
+    moveSession,
+    selectMask,
+    selectedMaskName,
+  ] = useChatStore((state) => [
+    state.sessions,
+    state.currentSessionIndex,
+    state.selectSession,
+    state.moveSession,
+    state.selectMask,
+    state.currentMaskName,
+  ]);
   const chatStore = useChatStore();
   const navigate = useNavigate();
   const isMobileScreen = useMobileScreen();
@@ -130,44 +137,100 @@ export function ChatList(props: { narrow?: boolean }) {
     moveSession(source.index, destination.index);
   };
 
+  const maskSessions = Array.from(
+    sessions.reduce((result, item) => {
+      const groupKey = item.mask.name;
+      if (!result.has(groupKey)) {
+        result.set(groupKey, []);
+      }
+      result.get(groupKey)!.push(item);
+      return result;
+    }, new Map<string, ChatSession[]>()),
+  );
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="chat-list">
-        {(provided) => (
-          <div
-            className={styles["chat-list"]}
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-          >
-            {sessions.map((item, i) => (
-              <ChatItem
-                title={item.topic}
-                time={new Date(item.lastUpdate).toLocaleString()}
-                count={item.messages.length}
-                key={item.id}
-                id={item.id}
-                index={i}
-                selected={i === selectedIndex}
-                onClick={() => {
-                  navigate(Path.Chat);
-                  selectSession(i);
-                }}
-                onDelete={async () => {
-                  if (
-                    (!props.narrow && !isMobileScreen) ||
-                    (await showConfirm(Locale.Home.DeleteChat))
-                  ) {
-                    chatStore.deleteSession(i);
-                  }
-                }}
-                narrow={props.narrow}
-                mask={item.mask}
-              />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <div className={styles["chat-list-container"]}>
+      <div className={styles["left"]}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="chat-list">
+            {(provided) => (
+              <div
+                className={styles["chat-list"]}
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {maskSessions.map(([key, item], i) => (
+                  <ChatItem
+                    title={key}
+                    time={new Date().toLocaleString()}
+                    count={item.length}
+                    key={item[0].id}
+                    id={item[0].id}
+                    index={i}
+                    selected={key === selectedMaskName}
+                    onClick={() => {
+                      navigate(Path.Chat);
+                      selectMask(key);
+                      const selectedItem = item.reduce(
+                        (max, mItem) =>
+                          mItem.lastUpdate > max.lastUpdate ? mItem : max,
+                        item[0],
+                      );
+                      selectSession(sessions.indexOf(selectedItem));
+                    }}
+                    onDelete={async () => {}}
+                    narrow={props.narrow}
+                    mask={item[0].mask}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+      <div className={styles["right"]}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="chat-list">
+            {(provided) => (
+              <div
+                className={styles["chat-list"]}
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {sessions
+                  .filter((s) => s.mask.name === selectedMaskName)
+                  .map((item, i) => (
+                    <ChatItem
+                      title={item.topic}
+                      time={new Date(item.lastUpdate).toLocaleString()}
+                      count={item.messages.length}
+                      key={item.id}
+                      id={item.id}
+                      index={sessions.indexOf(item)}
+                      selected={sessions.indexOf(item) === selectedIndex}
+                      onClick={() => {
+                        navigate(Path.Chat);
+                        selectSession(sessions.indexOf(item));
+                      }}
+                      onDelete={async () => {
+                        if (
+                          (!props.narrow && !isMobileScreen) ||
+                          (await showConfirm(Locale.Home.DeleteChat))
+                        ) {
+                          chatStore.deleteSession(sessions.indexOf(item));
+                        }
+                      }}
+                      narrow={props.narrow}
+                      mask={item.mask}
+                    />
+                  ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+    </div>
   );
 }

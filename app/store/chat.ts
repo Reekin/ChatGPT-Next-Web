@@ -191,6 +191,7 @@ function fillTemplateWith(input: string, modelConfig: ModelConfig) {
 const DEFAULT_CHAT_STATE = {
   sessions: [createEmptySession()],
   currentSessionIndex: 0,
+  currentMaskName: "",
   lastInput: "",
 };
 
@@ -232,6 +233,12 @@ export const useChatStore = createPersistStore(
           sessions: [createEmptySession()],
           currentSessionIndex: 0,
         }));
+      },
+
+      selectMask(maskName: string) {
+        set({
+          currentMaskName: maskName,
+        });
       },
 
       selectSession(index: number) {
@@ -295,19 +302,28 @@ export const useChatStore = createPersistStore(
         get().selectSession(limit(i + delta));
       },
 
-      deleteSession(index: number) {
-        const deletingLastSession = get().sessions.length === 1;
-        const deletedSession = get().sessions.at(index);
+      deleteSession(deleteIndex: number) {
+        const group = get().sessions.filter(
+          (s) => s.mask.name === get().currentMaskName,
+        );
+        const deletingLastSession = group.length === 1;
+        const selectedSession = get().currentSession();
+        const deletedSession = get().sessions.at(deleteIndex);
 
         if (!deletedSession) return;
 
         const sessions = get().sessions.slice();
-        sessions.splice(index, 1);
+        sessions.splice(deleteIndex, 1);
 
-        const currentIndex = get().currentSessionIndex;
-        let nextIndex = Math.min(
-          currentIndex - Number(index < currentIndex),
-          sessions.length - 1,
+        const deleteIndexInGroup = group.indexOf(deletedSession);
+        const selectedIndexInGroup = group.indexOf(selectedSession);
+        let nextIndex = sessions.indexOf(
+          deletedSession === selectedSession
+            ? group[
+                selectedIndexInGroup -
+                  Number(deleteIndexInGroup < selectedIndexInGroup)
+              ]
+            : selectedSession,
         );
 
         if (deletingLastSession) {
